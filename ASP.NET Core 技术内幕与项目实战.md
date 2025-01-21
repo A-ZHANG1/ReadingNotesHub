@@ -28,13 +28,58 @@
    - 请求与响应的中间件管道
    - 使用自定义中间件
 
-#### **第3章：依赖注入（Dependency Injection）**
-1. 依赖注入的原理与实现
+#### **第3章： .net core核心基础组件
+1. 依赖注入
    - 构建服务容器
    - 服务生命周期（Transient、Scoped、Singleton）
-2. 配置与使用
+2. 配置系统
    - 注册与解析服务
    - 基于接口的依赖注入设计模式
+   在 .NET Core 中，配置读取的方式包括以下几种：
+
+    1. **配置文件**  
+    - 默认支持 `appsettings.json` 和 `appsettings.{Environment}.json`。
+    - `configBuilder.build()`之后，注入服务到容器 
+        ```csharp
+            ServiceCollection services = new ServiceCollection();
+            service.AddOptions()
+                .Configure<DbSetting>(e+>config.GetSection("DB").Bind(e))
+                .Configure<SmtpSettings>(e+>config.GetSection("Smtp").Bind(e));
+            services.AddTransient<Demo>(); // Demo 不是单例，而是注册为transient瞬态服务
+        ```
+    2. **环境变量**  
+    - 从操作系统环境变量中读取配置，适用于敏感信息（如密钥）或不同环境的区分。
+        ```csharp
+                Microsoft.Extensions.Configuration.EnvironmentVariables包
+                AddEnvironmenrVariables方法注册
+        ```
+
+    3. **命令行参数**  
+    - 通过命令行参数传递配置值，适用于运行时动态调整配置。适合容器中给应用传递配置。
+    - 示例：`dotnet run --ConfigKey=ConfigValue`
+
+    4. **多配置源**  
+    - 支持将不同来源的配置合并为统一的配置对象，按后添加的配置提供程序中的配置覆盖之前的配置。
+    - 示例：配置文件、环境变量、命令行参数的组合。
+        ```csharp
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json") // 配置提供程序 1
+                .AddEnvironmentVariables();      // 配置提供程序 2
+
+            var configuration = builder.Build();
+            Console.WriteLine(configuration["MyKey"]); // 输出值来自环境变量（后添加的提供程序）
+        ```
+
+    6. **开发自己的配置提供程序**  
+        - `多级数据扁平化`后，配置项发生改变时需要调用 OnReload 方法通知监听代码
+        - 锁 避免TryGet读到Load加载到一半的数据
+            ```csharp
+                lockObj.EnterWriteLock()
+                lockObj.ExitWriteLock()
+
+                ReaderWriterLockSlim 只允许一个线程写入，允许多个线程读
+            ```
+3. 日志
 
 #### **第4章：配置与选项模式**
 1. 配置管理基础
