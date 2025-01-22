@@ -28,7 +28,7 @@
    - 请求与响应的中间件管道
    - 使用自定义中间件
 
-#### **第3章： .net core核心基础组件 **
+#### **第3章： .net core核心基础组件**
 1. 依赖注入
    - 构建服务容器
    - 服务生命周期（Transient、Scoped、Singleton）
@@ -80,6 +80,23 @@
             ReaderWriterLockSlim 只允许一个线程写入，允许多个线程读
             ```
 3. 日志
+    - Microsoft.Extensions.Logging
+        ```csharp
+        services.AddLogging(logBuilder => { // 注册日志相关服务到容器
+            logBuilder.AddConsole();  // 添加控制台日志输出的功能
+        })
+        var logger = services.BuildServiceProvider().GetRequiredService<Ilogger<Program>>(); // 使用泛型的ILogger接口从容器中获取一个用于输出日志的对象
+
+        LogTrace
+        LogDebug
+        LogInformation
+        LogWarning
+        LogError
+        LogCritical
+        ```
+
+    - 把日志写入文本文件：Nlog, Serilog
+    - 集中式日志系统：Azure的，AWS的，或者开源的Exceptionless和ELK
 
 #### **第4章：配置与选项模式**
 1. 配置管理基础
