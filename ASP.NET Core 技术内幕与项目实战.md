@@ -29,14 +29,47 @@
    - 使用自定义中间件
 
 #### **第3章： .net core核心基础组件**
-1. 依赖注入
-   - 构建服务容器
-   - 服务生命周期（Transient、Scoped、Singleton）
-2. 配置系统
-   - 注册与解析服务
-   - 基于接口的依赖注入设计模式
-   在 .NET Core 中，配置读取的方式包括以下几种：
+##### 1. 依赖注入DI
+ - 面向切面编程
+ - dependency injection container: Unity 5. 
+    - 容器：提供对象的注册和获取功能的框架
+    - 服务：注册到容器中的对象
+    Key Concepts of Unity 5:
+    - `Registration`: You register types (services) in the container, often with a specific lifetime (transient, singleton, etc.).
+    - `Resolution`: When you need an instance of a service, Unity resolves it from the container.
+    - `Injection`: The resolved service can be injected into your class either via constructors, properties, or method parameters.
+    ```charp
+    a dependency injection container or a service resolver.Resolve<IMetricLogger>(); // return the class that implements IMetricLogger interface
 
+    public static IServiceCollection ConfigureCors(IServiceCollection services) // 容器接口：ServiceCollection
+    {
+        // Configure CORS policy
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAllOrigins", builder =>
+            {
+                builder
+                    .AllowAnyOrigin() // Allow requests from any origin
+                    .AllowAnyMethod() // Allow any HTTP method (GET, POST, etc.)
+                    .AllowAnyHeader(); // Allow any headers
+            });
+        });
+
+        return services; // Return the IServiceCollection so it can be chained
+    }
+    ```
+    Other concpects:
+    - Lifetime Management： 获取服务的时候是创建一个新对象还是用之前的对象
+        - Clear() method to reset the container by replacing it with a new one, cleaning up the resources used by the previous container instance.
+        - Transient: 每次请求创建同一个对象。
+        - Scoped: 给定范围内多次请求共享同一个对象。默认scope是一次HTTP请求,不同注入会获得同一个对象。
+        - Singleton： 无状态对象，避免并发修改问题。全局共享一个。
+        - 被依赖服务的生命周期不能短于依赖的服务。
+        - IServiceCollection 接口定义了AddTransient/AddScoped/AddSingletion 3组扩展方法注册三种类型的服务
+    - Static IUnityContainer instance, shared across different parts of the application.
+    - Thread-Safe Container Creation： Interlocked.Exchange
+##### 2. 配置系统
+- 在 .NET Core 中，配置读取的方式包括以下几种：
     1. **配置文件**  
     - 默认支持 `appsettings.json` 和 `appsettings.{Environment}.json`。
     - `configBuilder.build()`之后，注入服务到容器 
@@ -53,7 +86,6 @@
         Microsoft.Extensions.Configuration.EnvironmentVariables包
         AddEnvironmenrVariables方法注册
         ```
-
     3. **命令行参数**  
     - 通过命令行参数传递配置值，适用于运行时动态调整配置。适合容器中给应用传递配置。
     - 示例：`dotnet run --ConfigKey=ConfigValue`
@@ -71,40 +103,55 @@
         ```
 
     6. **开发自己的配置提供程序**  
-        - `多级数据扁平化`后，配置项发生改变时需要调用 OnReload 方法通知监听代码
-        - 锁 避免TryGet读到Load加载到一半的数据
-            ```csharp
-            lockObj.EnterWriteLock()
-            lockObj.ExitWriteLock()
-
-            ReaderWriterLockSlim 只允许一个线程写入，允许多个线程读
-            ```
-3. 日志
-    - Microsoft.Extensions.Logging
+    - `多级数据扁平化`后，配置项发生改变时需要调用 OnReload 方法通知监听代码
+    - 锁 避免TryGet读到Load加载到一半的数据
         ```csharp
-        services.AddLogging(logBuilder => { // 注册日志相关服务到容器
-            logBuilder.AddConsole();  // 添加控制台日志输出的功能
-        })
-        var logger = services.BuildServiceProvider().GetRequiredService<Ilogger<Program>>(); // 使用泛型的ILogger接口从容器中获取一个用于输出日志的对象
+        lockObj.EnterWriteLock()
+        lockObj.ExitWriteLock()
 
-        LogTrace
-        LogDebug
-        LogInformation
-        LogWarning
-        LogError
-        LogCritical
+        ReaderWriterLockSlim 只允许一个线程写入，允许多个线程读
         ```
+##### 3. 日志
+- Microsoft.Extensions.Logging
+    ```csharp
+    services.AddLogging(logBuilder => { // 注册日志相关服务到容器
+        logBuilder.AddConsole();  // 添加控制台日志输出的功能
+    })
+    var logger = services.BuildServiceProvider().GetRequiredService<Ilogger<Program>>(); // 使用泛型的ILogger接口从容器中获取一个用于输出日志的对象
 
-    - 把日志写入文本文件：Nlog, Serilog
-    - 集中式日志系统：Azure的，AWS的，或者开源的Exceptionless和ELK
+    LogTrace
+    LogDebug
+    LogInformation
+    LogWarning
+    LogError
+    LogCritical
+    ```
+- 把日志写入文本文件：Nlog, Serilog
+- 集中式日志系统：Azure的，AWS的，或者开源的Exceptionless和ELK
 
-#### **第4章：配置与选项模式**
-1. 配置管理基础
-   - 配置源与配置提供程序
-   - 常见配置文件（`appsettings.json`、环境变量）
-2. 选项模式
-   - 使用 `IOptions<T>` 和 `IOptionsMonitor<T>`
-   - 自定义配置绑定
+#### **第4章：Entity Framework Core**
+ORM框架(c#对象，关系数据库，映射框架)。对ADO.NET的封装。
+- EF Core
+
+- Fluent API 配置类、对象关系映射定义实体关系:
+```csharp
+modelBuilder.Entity<Order>()
+    .HasKey(o => o.OrderId)
+    .HasName("PrimaryKey_OrderId");
+
+modelBuilder.Entity<Order>()
+    .HasOne(o => o.Customer)
+    .WithMany(c => c.Orders)
+    .HasForeignKey(o => o.CustomerId);
+```
+- LINQ 查询:
+```csharp
+var result = orders
+    .Where(o => o.Total > 100)
+    .OrderBy(o => o.OrderDate)
+    .Select(o => new { o.OrderId, o.Total });
+
+```
 
 #### **第5章：ASP.NET Core 路由与 MVC 模式**
 1. 路由基础
